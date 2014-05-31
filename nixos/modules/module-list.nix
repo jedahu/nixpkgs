@@ -34,6 +34,7 @@
   ./hardware/video/bumblebee.nix
   ./hardware/video/nvidia.nix
   ./installer/tools/nixos-checkout.nix
+  ./installer/tools/repeatable-build.nix
   ./installer/tools/tools.nix
   ./misc/assertions.nix
   ./misc/check-config.nix

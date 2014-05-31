@@ -81,6 +81,22 @@ done
 
 if [ -z "$action" ]; then showSyntax; fi
 
+repeatable=
+repo=
+refid=
+if [ "$(nix-instantiate --eval -A config.system.repeatableBuild.enable '<nixpkgs/nixos>' 2>/dev/null)" = 'true' ]; then
+  echo "$0: using repeatable build" >&2
+  repeatable=true
+fi
+
+
+# Validate arguments
+if [ -n "$repeatable" -a -n "$upgrade" ]; then
+  echo "$0: cannot have --update with repeatable configuration" >&2
+  exit 1
+fi
+
+
 # Only run shell scripts from the Nixpkgs tree if the action is
 # "switch", "boot", or "test". With other actions (such as "build"),
 # the user may reasonably expect that no code from the Nixpkgs tree is
@@ -97,6 +113,75 @@ if [ -n "$upgrade" -a -z "$_NIXOS_REBUILD_REEXEC" ]; then
     nix-channel --update nixos
 fi
 
+# If configuration is repeatable, fetch the correct nixpkgs revision.
+if [ -n "$repeatable" -a -z "$_NIXOS_REBUILD_REEXEC" ]; then
+  echo "$0: fetching for repeatable build" >&2
+  repo_=$(nix-instantiate --eval -A config.system.repeatableBuild.uri '<nixpkgs/nixos>' 2>/dev/null || echo "")
+  refid_=$(nix-instantiate --eval -A config.system.repeatableBuild.refid '<nixpkgs/nixos>' 2>/dev/null || echo "")
+  binaryCacheUrl_=$(nix-instantiate --eval -A config.system.repeatableBuild.binaryCache '<nixpkgs/nixos>' 2>/dev/null || echo "")
+  repo=${repo_:1:-1}
+  refid=${refid_:1:-1}
+  binaryCacheUrl=${binaryCacheUrl_:1:-1}
+  user_profile="/nix/var/nix/profiles/per-user/$USER/channels"
+  if [ -z "$repo" -o -z "$refid" ]; then
+    echo "$0: system.repeatableBuild without uri or refid" >&2
+    exit 1
+  fi
+  if [[ -e "$user_profile/nixos/nixpkgs/.git-revision" \
+    && "$(<"$user_profile/nixos/nixpkgs/.git-revision")" = "$refid" \
+    && -e "$user_profile/nixos/nixpkgs/.git-uri" \
+    && "$(<"$user_profile/nixos/nixpkgs/.git-uri")" = "$repo" ]]; then
+    echo "$0: this revision already downloaded"
+  else
+    if [[ "$repo" =~ ^[^/]+/[^/]+$ ]]; then # Fetch from github
+      github_tarball_url="https://codeload.github.com/$repo/tar.gz/$refid"
+      echo "$0: fetching $github_tarball_url" >&2
+      github_tarball_info=($(PRINT_PATH=1 QUIET=1 nix-prefetch-url "$github_tarball_url"))
+      github_tarball_hash=${github_tarball_info[0]}
+      github_tarball_path=${github_tarball_info[1]}
+      # Unpack into nix store
+      echo "$0: unpacking into $user_profile" >&2
+      nix-env --profile "$user_profile" \
+        -f '<nixpkgs/nixos/modules/installer/tools/unpack-nixpkgs-tarball.nix>' \
+        -i \
+        --quiet \
+        -E "f: f { uri = \"$repo\"; refid = \"$refid\"; channelName = \"nixos\"; src = builtins.storePath \"$github_tarball_path\"; binaryCacheURL = \"$binaryCacheUrl\"; }"
+    elif [[ "$repo" == ssh:*
+      || "$repo" == git:* ]]; then # Fetch from remote git
+      echo "$0: fetching git archive from remote $repo @ $refid" >&2
+      tmpdir=$(mktemp -d)
+      git archive \
+        --format=tar \
+        --remote="$repo" \
+        --prefix="nixpkgs/" \
+        "$rev" \
+        >"$tmpdir/nixos-$refid.tar.gz"
+      git_tarball_path=$(nix-store --add "$tmpdir/nixos-$refid.tar.gz")
+      rm -rf "$tmpdir"
+      nix-env --profile "$user_profile" \
+        -f '<nixpkgs/nixos/modules/installer/tools/unpack-nixpkgs-tarball.nix>' \
+        -i \
+        --quiet \
+        -E "f: f { uri = \"$repo\"; refid = \"$refid\"; channelName = \"nixos\"; src = builtins.storePath \"$git_tarball_path\"; binaryCacheURL = \"$binaryCacheUrl\"; }"
+    else # Fetch from local repo
+      echo "$0: fetching git archive from local $repo @ $refid" >&2
+      tmpdir=$(mktemp -d)
+      $(cd "$repo"
+        git archive \
+          --format=tar \
+          --prefix="nixpkgs/" \
+          "$refid" \
+          | gzip >"$tmpdir/nixos-$refid.tar.gz")
+      git_tarball_path=$(nix-store --add "$tmpdir/nixos-$refid.tar.gz")
+      rm -rf "$tmpdir"
+      nix-env --profile "$user_profile" \
+        -f '<nixpkgs/nixos/modules/installer/tools/unpack-nixpkgs-tarball.nix>' \
+        -i \
+        --quiet \
+        -E "f: f { uri = \"$repo\"; refid = \"$refid\"; channelName = \"nixos\"; src = builtins.storePath \"$git_tarball_path\"; binaryCacheURL = \"$binaryCacheUrl\"; }"
+    fi
+  fi
+fi
 
 # Re-execute nixos-rebuild from the Nixpkgs tree.
 if [ -z "$_NIXOS_REBUILD_REEXEC" -a -n "$canRun" ]; then
