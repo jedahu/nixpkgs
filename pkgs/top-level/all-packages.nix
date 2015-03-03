@@ -3276,6 +3276,7 @@ let
   };
 
   ccl = callPackage ../development/compilers/ccl { };
+  omnisharp-server-git = callPackage ../development/tools/omnisharp-server-git {};
 
   clang = llvmPackages.clang;
 

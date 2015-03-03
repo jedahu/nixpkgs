@@ -6,10 +6,10 @@ let
 in
 stdenv.mkDerivation rec {
   name = "mono-${version}";
-  version = "3.8.0";
+  version = "3.10.0";
   src = fetchurl {
     url = "http://download.mono-project.com/sources/mono/${name}.tar.bz2";
-    sha256 = "0jraxsjn7ra6z02n4wjpbj21mxm2w50iqviqvfl0ajikbxahvf3i";
+    md5 = "8c79f38bcab3ad0cf65728ca4c76b3c6";
   };
 
   buildInputs = [bison pkgconfig glib gettext perl libgdiplus libX11 ncurses zlib];
