@@ -5088,6 +5088,7 @@ with pkgs;
   };
 
   ccl = callPackage ../development/compilers/ccl { };
+  omnisharp-server-git = callPackage ../development/tools/omnisharp-server-git {};
 
   chez = callPackage ../development/compilers/chez { };
 
