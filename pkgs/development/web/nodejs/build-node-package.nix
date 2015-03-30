@@ -4,7 +4,8 @@
   name, version ? "", src,
 
   # by default name of nodejs interpreter e.g. "nodejs-${name}"
-  namePrefix ? nodejs.interpreterName + "-",
+  # namePrefix ? nodejs.interpreterName + "-",
+  namePrefix  ? "nodejs-",
 
   # Node package name
   pkgName ?
