@@ -29,6 +29,12 @@ in
       example = literalExample "pkgs.gitlab-runner_1_11";
     };
 
+    enableShellExecutor = mkOption {
+      description = "Enable shell executor (adds su and bash to path)";
+      default = false;
+      type = types.bool;
+    };
+
   };
 
   config = mkIf cfg.enable {
@@ -38,6 +44,7 @@ in
         ++ optional hasDocker "docker.service";
       requires = optional hasDocker "docker.service";
       wantedBy = [ "multi-user.target" ];
+      path = if cfg.enableShellExecutor then [pkgs.su pkgs.bash] else [];
       serviceConfig = {
         ExecStart = ''${cfg.package.bin}/bin/gitlab-runner run \
           --working-directory ${cfg.workDir} \
