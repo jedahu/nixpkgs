@@ -35,6 +35,12 @@ in
       type = types.bool;
     };
 
+    nixPath = mkOption {
+      description = "The NIX_PATH to add to the environment";
+      default = config.environment.variables.NIX_PATH;
+      type = types.string;
+    };
+
   };
 
   config = mkIf cfg.enable {
@@ -45,6 +51,7 @@ in
       requires = optional hasDocker "docker.service";
       wantedBy = [ "multi-user.target" ];
       path = if cfg.enableShellExecutor then [pkgs.su pkgs.bash] else [];
+      environment = { NIX_PATH = cfg.nixPath; };
       serviceConfig = {
         ExecStart = ''${cfg.package.bin}/bin/gitlab-runner run \
           --working-directory ${cfg.workDir} \
