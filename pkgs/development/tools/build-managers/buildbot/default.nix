@@ -3,6 +3,7 @@
 let
   withPlugins = plugins: runCommand "wrapped-${package.name}" {
     buildInputs = [ makeWrapper ] ++ plugins;
+    propagatedBuildInputs = package.propagatedBuildInputs;
     passthru.withPlugins = moarPlugins: withPlugins (moarPlugins ++ plugins);
   } ''
     makeWrapper ${package}/bin/buildbot $out/bin/buildbot \
@@ -10,14 +11,14 @@ let
     ln -sfv ${package}/lib $out/lib
   '';
 
-  package = pythonPackages.buildPythonApplication (rec {
+  package = pythonPackages.buildPythonApplication rec {
     name = "${pname}-${version}";
     pname = "buildbot";
-    version = "0.9.7";
+    version = "0.9.11";
 
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "0cwy39ap2v9kni3zm92633cnqf7qsnb4zlargx060pbfagkg1jwg";
+      sha256 = "1s3y218wry7502xp4zxccf3z996xm8cnp3dcxl7m5ldmmb055qwv";
     };
 
     buildInputs = with pythonPackages; [
@@ -39,7 +40,6 @@ let
     ];
 
     propagatedBuildInputs = with pythonPackages; [
-
       # core
       twisted
       jinja2
@@ -83,9 +83,9 @@ let
 
     meta = with stdenv.lib; {
       homepage = http://buildbot.net/;
-      description = "Continuous integration system that automates the build/test cycle";
+      description = "Buildbot is an open-source continuous integration framework for automating software build, test, and release processes";
       maintainers = with maintainers; [ nand0p ryansydnor ];
       license = licenses.gpl2;
     };
-  });
+  };
 in package

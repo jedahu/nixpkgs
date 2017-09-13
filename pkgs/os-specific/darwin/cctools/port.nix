@@ -1,10 +1,12 @@
 { stdenv, fetchFromGitHub, makeWrapper, autoconf, automake, libtool_2
 , llvm, libcxx, libcxxabi, clang, libuuid
 , libobjc ? null, maloader ? null, xctoolchain ? null
-, buildPlatform, hostPlatform, targetPlatform
+, hostPlatform, targetPlatform
 }:
 
 let
+  # The prefix prepended to binary names to allow multiple binuntils on the
+  # PATH to both be usable.
   prefix = stdenv.lib.optionalString
     (targetPlatform != hostPlatform)
     "${targetPlatform.config}-";
@@ -27,7 +29,8 @@ let
       sha256 = "0l45mvyags56jfi24rawms8j2ihbc45mq7v13pkrrwppghqrdn52";
     };
 
-    buildInputs = [ autoconf automake libtool_2 libuuid ] ++
+    nativeBuildInputs = [ autoconf automake libtool_2 ];
+    buildInputs = [ libuuid ] ++
       # Only need llvm and clang if the stdenv isn't already clang-based (TODO: just make a stdenv.cc.isClang)
       stdenv.lib.optionals (!stdenv.isDarwin) [ llvm clang ] ++
       stdenv.lib.optionals stdenv.isDarwin [ libcxxabi libobjc ];
@@ -38,13 +41,10 @@ let
 
     enableParallelBuilding = true;
 
+    # TODO(@Ericson2314): Always pass "--target" and always prefix.
+    configurePlatforms = [ "build" "host" ] ++ stdenv.lib.optional (targetPlatform != hostPlatform) "target";
     configureFlags = stdenv.lib.optionals (!stdenv.isDarwin) [
       "CXXFLAGS=-I${libcxx}/include/c++/v1"
-    ] ++ stdenv.lib.optionals (targetPlatform != buildPlatform) [
-      # TODO make unconditional next hash break
-      "--build=${buildPlatform.config}"
-      "--host=${hostPlatform.config}"
-      "--target=${targetPlatform.config}"
     ];
 
     postPatch = ''
@@ -104,9 +104,13 @@ let
         done
       '';
 
+    passthru = {
+      inherit prefix;
+    };
+
     meta = {
-      homepage = "http://www.opensource.apple.com/source/cctools/";
-      description = "Mac OS X Compiler Tools (cross-platform port)";
+      homepage = http://www.opensource.apple.com/source/cctools/;
+      description = "MacOS Compiler Tools (cross-platform port)";
       license = stdenv.lib.licenses.apsl20;
     };
   };

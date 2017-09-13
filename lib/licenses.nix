@@ -198,7 +198,7 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
 
   eupl11 = spdx {
     spdxId = "EUPL-1.1";
-    fullname = "European Union Public License 1.1";
+    fullName = "European Union Public License 1.1";
   };
 
   fdl12 = spdx {
@@ -363,7 +363,7 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
   };
 
   miros = {
-    fullname = "MirOS License";
+    fullName = "MirOS License";
     url = https://opensource.org/licenses/MirOS;
   };
 
@@ -546,12 +546,12 @@ lib.mapAttrs (n: v: v // { shortName = n; }) rec {
     fullName = "zlib License";
   };
 
-  zpt20 = spdx { # FIXME: why zpt* instead of zpl*
+  zpl20 = spdx {
     spdxId = "ZPL-2.0";
     fullName = "Zope Public License 2.0";
   };
 
-  zpt21 = spdx {
+  zpl21 = spdx {
     spdxId = "ZPL-2.1";
     fullName = "Zope Public License 2.1";
   };
